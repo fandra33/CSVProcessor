@@ -1,70 +1,73 @@
-package org.example.csvreaderprocesor.csv;
+package org.example.csvreaderprocesor.gui;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.layout.StackPane;
-import javafx.scene.paint.Color;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
-import javafx.application.Application;
-import javafx.scene.Scene;
-import javafx.scene.chart.LineChart;
-import javafx.scene.chart.NumberAxis;
+import org.example.csvreaderprocesor.csv.CSVDataReader;
+import org.example.csvreaderprocesor.csv.CSVRow;
+import org.example.csvreaderprocesor.graph.Graph;
+import javafx.scene.layout.*;
 import javafx.scene.chart.XYChart;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 public class GraphWithAxes extends Application {
-        @Override
-        public void start(Stage primaryStage) {
-            // Create X and Y axes
-            NumberAxis xAxis = new NumberAxis();
-            xAxis.setLabel("Month");
+        public static void display(CSVDataReader csvDataReader) {
+            Stage window = new Stage();
+            GridPane gridPane = new GridPane();
+            // Make columns grow to fill available space
+            ColumnConstraints col1 = new ColumnConstraints();
+            col1.setPercentWidth(50); // 50% of available width
+            col1.setHgrow(Priority.ALWAYS);
 
-            NumberAxis yAxis = new NumberAxis();
-            yAxis.setLabel("Sales ($)");
+            ColumnConstraints col2 = new ColumnConstraints();
+            col2.setPercentWidth(50); // 50% of available width
+            col2.setHgrow(Priority.ALWAYS);
 
-            // Create line chart
-            LineChart<Number, Number> lineChart = new LineChart<>(xAxis, yAxis);
-            lineChart.setTitle("Monthly Sales Data");
+            gridPane.getColumnConstraints().addAll(col1, col2);
+            gridPane.setHgap(10); // horizontal gap between columns
+            gridPane.setVgap(10); // vertical gap between rows
+            gridPane.setPadding(new javafx.geometry.Insets(10));
+            ArrayList<Graph> graphs = new ArrayList<>();
 
-            // Create data series
-            XYChart.Series<Number, Number> series1 = new XYChart.Series<>();
-            series1.setName("Product A");
+            List<String> headers = csvDataReader.getHeaders();
+            for (String header : headers) {
+                System.out.println("Header: " + header);
+            }
+            int nrHeaders = headers.size();
+            for (int i = 1; i < nrHeaders; i++){
+                String xHeader = headers.get(0);
+                String yHeader = headers.get(i);
 
-            // Add your data points (month, sales)
-            series1.getData().add(new XYChart.Data<>(1, 2300));
-            series1.getData().add(new XYChart.Data<>(2, 3400));
-            series1.getData().add(new XYChart.Data<>(3, 2800));
-            series1.getData().add(new XYChart.Data<>(4, 4200));
-            series1.getData().add(new XYChart.Data<>(5, 5100));
-            series1.getData().add(new XYChart.Data<>(6, 4800));
+                Graph graph = new Graph();
+                graph.initializeChart(xHeader, yHeader, yHeader + " - " + xHeader, yHeader);
 
-            // Create another data series
-            XYChart.Series<Number, Number> series2 = new XYChart.Series<>();
-            series2.setName("Product B");
+                for (CSVRow row : csvDataReader.getRows()) {
+                    Number xValue = row.getDouble(xHeader);
+                    Number yValue = row.getDouble(yHeader);
+                    graph.addDataPoint(xValue, yValue);
+                }
+                graphs.add(graph);
+            }
 
-            series2.getData().add(new XYChart.Data<>(1, 1500));
-            series2.getData().add(new XYChart.Data<>(2, 1800));
-            series2.getData().add(new XYChart.Data<>(3, 2200));
-            series2.getData().add(new XYChart.Data<>(4, 2800));
-            series2.getData().add(new XYChart.Data<>(5, 3500));
-            series2.getData().add(new XYChart.Data<>(6, 4000));
+            for (int i = 0; i < nrHeaders-1; i++) {
+                System.out.println("Graph Title: " + graphs.get(i).getLineChart().getTitle());
+                for (XYChart.Data<Number, Number> dataPoint : graphs.get(i).getSeries().getData()) {
+                    System.out.println("Data Point - X: " + dataPoint.getXValue() + ", Y: " + dataPoint.getYValue());
+                }
+                gridPane.add(graphs.get(i).getLineChart(), i%2, i/2 );
+            }
 
-            // Add series to chart
-            lineChart.getData().addAll(series1, series2);
+            Scene scene = new Scene(gridPane);
+            window.setScene(scene);
+            window.show();
 
-            VBox root = new VBox(lineChart);
-            Scene scene = new Scene(root, 800, 600);
-
-            primaryStage.setTitle("Data Graph with X and Y Axes");
-            primaryStage.setScene(scene);
-            primaryStage.show();
         }
-
-        public static void main(String[] args) {
-            launch(args);
-        }
+    @Override
+    public void start(Stage stage) throws IOException {
     }
+}

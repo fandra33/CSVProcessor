@@ -1,4 +1,66 @@
+// replace the existing main method in `src/main/java/org/example/csvreaderprocesor/gui/MainApp.java`
+
 package org.example.csvreaderprocesor.gui;
 
-public class MainApp {
-}
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
+import org.example.csvreaderprocesor.csv.CSVDataReader;
+import org.example.csvreaderprocesor.csv.CSVRow;
+import org.example.csvreaderprocesor.gui.GraphWithAxes;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
+
+
+    public class MainApp extends Application {
+
+        public static void main(String[] args) throws IOException {
+
+
+            launch(args);
+        }
+
+        @Override
+        public void start(Stage stage) {
+            Button csvButton = new Button("Select CSV File");
+            Label label = new Label("No file selected");
+            csvButton.setOnAction(e -> {
+                FileChooser fileChooser = new FileChooser();
+                fileChooser.setTitle("Open CSV File");
+                fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+                File selectedFile = fileChooser.showOpenDialog(stage);
+                if (selectedFile != null) {
+                    Path path = Paths.get(selectedFile.getAbsolutePath());
+                    CSVDataReader csvDataReader = new CSVDataReader();
+                    try {
+                        List<CSVRow> rows = csvDataReader.readCSV(path.toString());
+
+                        GraphWithAxes.display(csvDataReader);
+
+                    } catch (IOException ex) {
+                        label.setText("Error reading file: " + ex.getMessage());
+                    }
+
+                }
+            });
+            VBox root = new VBox(10);
+            root.getChildren().addAll(csvButton, label);
+
+            Scene scene = new Scene(root);
+            stage.setScene(scene);
+            stage.setTitle("CSV Reader");
+            stage.show();
+        }
+    }
+
+
