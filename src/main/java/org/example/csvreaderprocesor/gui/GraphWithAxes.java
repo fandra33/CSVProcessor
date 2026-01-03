@@ -39,6 +39,8 @@ public class GraphWithAxes extends Application {
                 System.out.println("Header: " + header);
             }
             int nrHeaders = headers.size();
+            int prev = -1;
+            int repeatedTimes = 0;
             for (int i = 1; i < nrHeaders; i++){
                 String xHeader = headers.get(0);
                 String yHeader = headers.get(i);
@@ -47,7 +49,14 @@ public class GraphWithAxes extends Application {
                 graph.initializeChart(xHeader, yHeader, yHeader + " - " + xHeader, yHeader);
 
                 for (CSVRow row : csvDataReader.getRows()) {
-                    Number xValue = row.getDouble(xHeader);
+                    int currentTime = row.getInt(xHeader) * 10 + repeatedTimes;  // daca pot exista timpi repetati de ordinul zecilor se inlocuieste 10 cu 100
+                    if (currentTime == prev) {
+                        repeatedTimes += 1;
+                    } else {
+                        repeatedTimes = 0;
+                    }
+                    Number xValue = row.getInt(xHeader) * 10 + repeatedTimes;
+                    prev = row.getInt(yHeader) * 10 + repeatedTimes;
                     Number yValue = row.getDouble(yHeader);
                     graph.addDataPoint(xValue, yValue);
                 }
