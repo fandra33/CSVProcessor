@@ -1,11 +1,9 @@
-// replace the existing main method in `src/main/java/org/example/csvreaderprocesor/gui/MainApp.java`
-
 package org.example.csvreaderprocesor.gui;
 
 import javafx.application.Application;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
@@ -25,15 +23,12 @@ import java.util.List;
     public class MainApp extends Application {
 
         public static void main(String[] args) throws IOException {
-
-
             launch(args);
         }
 
         @Override
         public void start(Stage stage) {
             Button csvButton = new Button("Select CSV File");
-            Label label = new Label("No file selected");
             csvButton.setOnAction(e -> {
                 FileChooser fileChooser = new FileChooser();
                 fileChooser.setTitle("Open CSV File");
@@ -44,17 +39,26 @@ import java.util.List;
                     CSVDataReader csvDataReader = new CSVDataReader();
                     try {
                         List<CSVRow> rows = csvDataReader.readCSV(path.toString());
-
                         GraphWithAxes.display(csvDataReader);
 
                     } catch (IOException ex) {
-                        label.setText("Error reading file: " + ex.getMessage());
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Error");
+                        alert.setHeaderText("CSV File Error");
+                        alert.setContentText(ex.getMessage());
+                        alert.showAndWait();
+                    } catch (Exception ex) {
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+                        alert.setTitle("Error");
+                        alert.setHeaderText("Processing Error");
+                        alert.setContentText(ex.getMessage());
+                        alert.showAndWait();
                     }
 
                 }
             });
             VBox root = new VBox(10);
-            root.getChildren().addAll(csvButton, label);
+            root.getChildren().addAll(csvButton);
 
             Scene scene = new Scene(root);
             stage.setScene(scene);
@@ -62,5 +66,3 @@ import java.util.List;
             stage.show();
         }
     }
-
-

@@ -45,5 +45,4 @@ cd csvReaderProcesor
 # build
 mvn clean package
 # rulează cu fișier de test din resurse
-java --enable-native-access=javafx.graphics -jar target/csvReaderProcesor-1.0-SNAPSHOT.jar src/main/resources/data3col.csv
 ```
