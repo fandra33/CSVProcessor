@@ -1,13 +1,19 @@
 package org.example.csvreaderprocesor.gui;
 
 import javafx.application.Application;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.chart.LineChart;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
 import javafx.stage.Stage;
 import org.example.csvreaderprocesor.csv.CSVDataReader;
 import org.example.csvreaderprocesor.csv.CSVRow;
 import org.example.csvreaderprocesor.graph.Graph;
-import javafx.scene.layout.*;
+import org.example.csvreaderprocesor.graph.CSVTypeCheck;
 import javafx.scene.chart.XYChart;
 
 import java.io.IOException;
@@ -16,66 +22,106 @@ import java.util.List;
 
 
 public class GraphWithAxes extends Application {
-        public static void display(CSVDataReader csvDataReader) {
-            Stage window = new Stage();
-            GridPane gridPane = new GridPane();
-            // Make columns grow to fill available space
-            ColumnConstraints col1 = new ColumnConstraints();
-            col1.setPercentWidth(50); // 50% of available width
-            col1.setHgrow(Priority.ALWAYS);
-
-            ColumnConstraints col2 = new ColumnConstraints();
-            col2.setPercentWidth(50); // 50% of available width
-            col2.setHgrow(Priority.ALWAYS);
-
-            gridPane.getColumnConstraints().addAll(col1, col2);
-            gridPane.setHgap(10); // horizontal gap between columns
-            gridPane.setVgap(10); // vertical gap between rows
-            gridPane.setPadding(new javafx.geometry.Insets(10));
-            ArrayList<Graph> graphs = new ArrayList<>();
-
-            List<String> headers = csvDataReader.getHeaders();
-            for (String header : headers) {
-                System.out.println("Header: " + header);
-            }
-            int nrHeaders = headers.size();
-            int prev = -1;
-            int repeatedTimes = 0;
-            for (int i = 1; i < nrHeaders; i++){
-                String xHeader = headers.get(0);
-                String yHeader = headers.get(i);
-
-                Graph graph = new Graph();
-                graph.initializeChart(xHeader, yHeader, yHeader + " - " + xHeader, yHeader);
-
-                for (CSVRow row : csvDataReader.getRows()) {
-                    int currentTime = row.getInt(xHeader) * 10 + repeatedTimes;  // daca pot exista timpi repetati de ordinul zecilor se inlocuieste 10 cu 100
-                    if (currentTime == prev) {
-                        repeatedTimes += 1;
-                    } else {
-                        repeatedTimes = 0;
-                    }
-                    Number xValue = row.getInt(xHeader) * 10 + repeatedTimes;
-                    prev = row.getInt(yHeader) * 10 + repeatedTimes;
-                    Number yValue = row.getDouble(yHeader);
-                    graph.addDataPoint(xValue, yValue);
-                }
-                graphs.add(graph);
-            }
-
-            for (int i = 0; i < nrHeaders-1; i++) {
-                System.out.println("Graph Title: " + graphs.get(i).getLineChart().getTitle());
-                for (XYChart.Data<Number, Number> dataPoint : graphs.get(i).getSeries().getData()) {
-                    System.out.println("Data Point - X: " + dataPoint.getXValue() + ", Y: " + dataPoint.getYValue());
-                }
-                gridPane.add(graphs.get(i).getLineChart(), i%2, i/2 );
-            }
-
-            Scene scene = new Scene(gridPane);
-            window.setScene(scene);
-            window.show();
-
+    public static void display(CSVDataReader csvDataReader) {
+        CSVTypeCheck csvTypeCheck = new CSVTypeCheck();
+        if (!CSVTypeCheck.itsVCUorBMS(csvDataReader.getHeaders())) {
+            return;
         }
+        VBox root = new VBox();
+        Stage window = new Stage();
+        ScrollPane scrollPane = new ScrollPane();
+        VBox paneGraphs = new VBox();
+        paneGraphs.setAlignment(Pos.CENTER); // center children horizontally
+        paneGraphs.setSpacing(10);
+        scrollPane.setContent(paneGraphs);
+        scrollPane.setFitToWidth(true);
+        TextField searchField = new TextField();
+        root.getChildren().addAll(searchField, scrollPane);
+        searchField.setPromptText("Search by series name...");
+        ArrayList<Graph> graphs = new ArrayList<>();
+
+        List<String> headers = csvDataReader.getHeaders();
+        for (int i = 1; i < headers.size(); i++) {
+            try {
+                if (csvDataReader.getRows().isEmpty()) {
+                    continue;
+                }
+                csvDataReader.getRows().getFirst().getInt(headers.get(i));
+            } catch (NumberFormatException e) {
+                continue;
+            }
+            String xHeader = headers.get(0);
+            String yHeader = headers.get(i);
+
+            Graph graph = new Graph();
+            graph.initializeChart(xHeader, yHeader, yHeader + " - " + xHeader, yHeader);
+
+            for (CSVRow row : csvDataReader.getRows()) {
+                Number xValue = row.getInt(xHeader);
+                Number yValue = row.getDouble(yHeader);
+                graph.addDataPoint(xValue, yValue);
+            }
+            graphs.add(graph);
+        }
+
+        // Bind each chart's preferred width to window width (capped at 600) and make height equal to width
+        for (Graph g : graphs) {
+            Region chartRegion = (Region) g.getLineChart();
+            // Cap size to 600 and leave a small margin (40) so charts don't touch window edges
+            DoubleBinding sizeBinding = Bindings.createDoubleBinding(
+                    () -> Math.max(0, Math.min(600, window.getWidth() - 40)),
+                    window.widthProperty()
+            );
+
+            chartRegion.maxWidth(600);
+            chartRegion.setMaxSize(600, 600);
+            chartRegion.setMinSize(0, 0);
+            chartRegion.prefWidthProperty().bind(sizeBinding);
+            chartRegion.prefHeightProperty().bind(sizeBinding);
+
+            StackPane container = new StackPane(chartRegion);
+            container.setAlignment(Pos.CENTER);
+            container.setMaxWidth(Double.MAX_VALUE); // allow VBox to center it
+            paneGraphs.getChildren().add(container);
+        }
+
+        Scene scene = new Scene(root, 800, 600);
+        window.setScene(scene);
+        searchField.textProperty().addListener((observable, oldValue, newValue) -> {
+            String query = newValue.toLowerCase();
+
+            // Clear the current view
+            paneGraphs.getChildren().clear();
+
+            for (Graph chart : graphs) {
+                // Check if any series in the chart matches the query
+                boolean matches = chart.getLineChart().getData().stream()
+                        .anyMatch(series -> series.getName().toLowerCase().contains(query));
+
+                if (matches || query.isEmpty()) {
+                    Region chartRegion = (Region) chart.getLineChart();
+                    // Cap size to 600 and leave a small margin (40) so charts don't touch window edges
+                    DoubleBinding sizeBinding = Bindings.createDoubleBinding(
+                            () -> Math.max(0, Math.min(600, window.getWidth() - 40)),
+                            window.widthProperty()
+                    );
+
+                    chartRegion.maxWidth(600);
+                    chartRegion.setMaxSize(600, 600);
+                    chartRegion.setMinSize(0, 0);
+                    chartRegion.prefWidthProperty().bind(sizeBinding);
+                    chartRegion.prefHeightProperty().bind(sizeBinding);
+
+                    StackPane container = new StackPane(chartRegion);
+                    container.setAlignment(Pos.CENTER);
+                    container.setMaxWidth(Double.MAX_VALUE); // allow VBox to center it
+                    paneGraphs.getChildren().add(container);
+                }
+            }
+        });
+        window.show();
+    }
+
     @Override
     public void start(Stage stage) throws IOException {
     }

@@ -20,12 +20,6 @@ public class CSVRow {
     public Map<String, String> getData() {
         return data;
     }
-//    public ArrayList<String> getHeaders() {
-//        ArrayList<String> headers = new ArrayList<>();
-//        for (String key : data.keySet()) {
-//            headers.add(key);
-//        }
-//        return headers;
-//    }
 
 }
+
