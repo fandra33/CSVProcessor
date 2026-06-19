@@ -24,7 +24,7 @@ import java.util.List;
 public class GraphWithAxes extends Application {
     public static void display(CSVDataReader csvDataReader) {
         CSVTypeCheck csvTypeCheck = new CSVTypeCheck();
-        if (!CSVTypeCheck.itsVCUorBMS(csvDataReader.getHeaders())) {
+        if (!CSVTypeCheck.ValidCSV(csvDataReader.getHeaders())) {
             return;
         }
         VBox root = new VBox();
@@ -41,7 +41,7 @@ public class GraphWithAxes extends Application {
         ArrayList<Graph> graphs = new ArrayList<>();
 
         List<String> headers = csvDataReader.getHeaders();
-        for (int i = 1; i < headers.size(); i++) {
+        for (int i = 4; i < headers.size(); i++) {
             try {
                 if (csvDataReader.getRows().isEmpty()) {
                     continue;
@@ -50,14 +50,15 @@ public class GraphWithAxes extends Application {
             } catch (NumberFormatException e) {
                 continue;
             }
-            String xHeader = headers.get(0);
+            String xHeader = "timestamp";
             String yHeader = headers.get(i);
 
             Graph graph = new Graph();
             graph.initializeChart(xHeader, yHeader, yHeader + " - " + xHeader, yHeader);
-
+            int timestamp = 1;
             for (CSVRow row : csvDataReader.getRows()) {
-                Number xValue = row.getInt(xHeader);
+                Number xValue = timestamp;
+                timestamp++;
                 Number yValue = row.getDouble(yHeader);
                 graph.addDataPoint(xValue, yValue);
             }
@@ -94,7 +95,6 @@ public class GraphWithAxes extends Application {
             paneGraphs.getChildren().clear();
 
             for (Graph chart : graphs) {
-                // Check if any series in the chart matches the query
                 boolean matches = chart.getLineChart().getData().stream()
                         .anyMatch(series -> series.getName().toLowerCase().contains(query));
 
